@@ -1,0 +1,36 @@
+<template name="search_panel">
+  <style>
+  em {
+    color:blue; font-weight: bold;
+  }
+  h3 {
+    font-size: 11pt;
+  }
+  </style>
+  <div style="padding:20px; background-color:rgb(250,250,250)">
+    <h1>Museum Search</h1>
+    Query
+    <input type="text" class=""
+      style="width:500px;"
+      onfocus="this.placeholder = ''"
+      onblur="this.placeholder = 'Recherche dans plus de 3000 pdf'"
+    />
+    <span>{{status}} {{etime}}</span>
+  </div>
+  <div>
+    {{err_message}}
+  </div>
+
+  <div>
+    {{#if results}}
+      {{#each it in results}}
+      <h3>{{trimfn it.filename}} (p. {{it.pageno}}) ::{{it.rank}}</h3>
+      <p>{{{it.h1}}}</p>
+      <hr>
+      {{/each}}
+    {{else}}
+    <p>No results</p>
+    {{/if}}
+  </div>
+
+</template>
