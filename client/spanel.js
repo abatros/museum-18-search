@@ -71,7 +71,7 @@ Template.search_panel.events({
 Template.search_panel.helpers({
   results() {
     const tp = Template.instance()
-    //console.log('tp.hlist:',tp.hlist)
+    console.log('tp.hlist:',tp.hlist.get())
     return tp.hlist.get();
   },
   err_message: ()=>{

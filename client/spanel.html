@@ -24,7 +24,7 @@
   <div>
     {{#if results}}
       {{#each it in results}}
-      <h3>{{trimfn it.filename}} (p. {{it.pageno}}) ::{{it.rank}}</h3>
+      <h3><a href="/pdf/?id={{it.filename}}&page={{it.pageno}}">{{trimfn it.filename}} (p. {{it.pageno}}) ::{{it.rank}}</a></h3>
       <p>{{{it.h1}}}</p>
       <hr>
       {{/each}}
