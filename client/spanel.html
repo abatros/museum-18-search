@@ -8,14 +8,38 @@
   }
   </style>
   <div style="padding:20px; background-color:rgb(250,250,250)">
-    <h1>Museum Search</h1>
+    <h1 style="margin:10px;">Museum Search</h1>
+    <div style="margin-bottom:20px;">
+      [ <a href="#" class="js-search-history">search history</a> ]
+      [ <a href="#" class="js-clear-history">clear history</a> ]
+    </div>
     Query
     <input type="text" class=""
       style="width:500px;"
       onfocus="this.placeholder = ''"
       onblur="this.placeholder = 'Recherche dans plus de 3000 pdf'"
+      value = {{query}}
     />
-    <span>{{status}} {{etime}}</span>
+    <!--
+        Here, two states.
+        (1) type your query here
+        (2) invite for CR or press Enter
+        (3) 'wait for results'
+    -->
+    {{#if statusIs 'q1'}}
+      <span>
+        [ <span class="pointer red-hover js-search">search now</span> ] or press 'Enter'
+      </span>
+    {{else}}
+    <span>{{status}}</span>
+    {{/if}}
+
+
+    <div style="margin-top:10px; color:green; font-family:monospace;">
+      {{#each it in audit}}
+      <div>{{it}}</div>
+      {{/each}}
+    </div>
   </div>
   <div>
     {{err_message}}

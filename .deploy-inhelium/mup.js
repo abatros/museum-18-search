@@ -3,8 +3,8 @@ module.exports = {
     one: {
       // TODO: set host address, username, and authentication method
       host: 'inhelium.com',
-      username: 'dkz',
-      pem: '~/.ssh/id_rsa'
+      username: 'dkz'
+      //pem: '~/.ssh/id_rsa'
     }
   },
 

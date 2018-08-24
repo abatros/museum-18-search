@@ -1,0 +1,27 @@
+<template name="search_history">
+  <div id="search-history-modal"
+    class="modal-background"
+    style="color:black;">
+
+    <!-- Modal content -->
+    <div class="modal-content"
+        style="margin:100px; border:1px solid white;
+        background-color:rgb(230,230,230);
+        min-height:600px;"
+        >
+      <div class="close js-quit"
+        style="height:0px; overflow:show; text-align:right; font-weight:bold; font-size:40px; padding:0px; margin:0 15px 0 0; cursor:pointer;"
+        >&times;</div>
+      <div style="text-align:center; margin-top:10px;">Search History</div>
+
+      <div style="margin:20px; border:1px solid red; padding:20px;">
+        {{#each it in history}}
+        <div>
+          {{it.pages}} pages -- <span class="pointer red-hover js-select-from-history">{{it.query}}</span>
+        </div>
+        {{/each}}
+      </div>
+
+    </div>
+  </div>
+</template>

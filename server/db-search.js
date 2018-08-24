@@ -1,6 +1,8 @@
 const massive = require('massive');
 const monitor = require('pg-monitor');
 import R from 'ramda';
+const nspell = require('./nspell.js')
+console.log(`nspell.vdico:`,nspell.vdico);
 
 const conn = {
   host: 'inhelium.com',
@@ -34,145 +36,184 @@ export const db_init = async function(){
 
 // -----------------------------------------------------------------------
 
-const search = async function(_query) {
-  console.log(`search for <${_query}>`)
-  try {
-  var data = await db.query(`
-    select id, fn, pageno,
-      body as h1,
-        ts_rank_cd(tsv,to_tsquery($(lang),$(query))) as rank
-    from pdf_pages
-      where tsv @@ to_tsquery($(lang),$(query))
-     ORDER BY rank DESC, fn
-      LIMIT 50;
-      `,{
-  //      query:'dimensions<2>tuyaux'
-  //        query: 'dimension<->de<->tuyaux'
-  //        query: 'VACUOMÈTRE'
-  //        query: 'alliage<2>cuivre'
-//          query: 'raccord<2>laiton',
-        lang: 'french',
-//        query: 'normalized<->lexeme',
-//        query: 'stop<->word',
-//          query: '64-bit'
-//          query: 'vacuum<->freeze | relfrozenxid'
-          query: _query
-      }
-
-  );//.then(r=>{console.log(r)})
-  //data.h1 = data.h1.replace(/[ \.][ \.]+/g,' ')
-
-  if (false)
-  data.forEach(it=>{
-    console.log(`\n\n=======================\n<${it.filename}>::${it.pageno+1}::${it.rank}`)
-    console.log(`data:`,it.h1.replace(/[ \.][ \.]+/g,' ').replace(/\s\s+/g,' ').replace(/<!>/g,' (...) '));
-//    console.log('body:\n============\n',it.body);
-  })
-
-  return data;
-} catch (e){
-  console.log('ERROR:', JSON.stringify(e))
-  console.log('e.message:', e.message);
-  Session.set('e.message',e.message)
-//  console.log('db.QueryResultError:', db.QueryResultError())
-}
-}
-
-
-// -----------------------------------------------------------------------
-
-const search_rank_cd = async function(_query) {
-  console.log(`search_rank_async for <${_query}>`)
-  const etime = new Date().getTime();
-//  const retv = await db.query(`select * from pdf__search_rank_cd($(query)::text)`,{query:_query});
-  const data = await db.pdf__search_rank_cd(_query);
-  console.log(`search_rank_cd(${_query}) etime:${new Date().getTime()-etime}`);
-  console.log(`=>data.length:`,data.length)
-  return data;
-}
-
-
-// -----------------------------------------------------------------------
-
-const search2 = async function(_query) {
-  const etime = new Date().getTime();
-  console.log(`search for <${_query}>`)
-  try {
-    var data = await db.query(`
-    select id, fn, pageno, rank,
-      ts_headline($(lang),body,
-        to_tsquery($(lang),$(query)),
-        'StartSel ="<em>", StopSel ="</em>", MaxWords = 50, MinWords = 19, HighlightAll = false, MaxFragments = 99, FragmentDelimiter = "\n<!>"')
-        as h1
-
-    from (
-      select id, fn, pageNo, body,
-        ts_rank_cd(tsv,qqq) as rank
-      from pdf_pages, to_tsquery($(lang),$(query)) as qqq
-      where tsv @@ qqq
-     ORDER BY rank DESC, fn
-      LIMIT 5000
-    ) as top10;
-      `,{
-  //      query:'dimensions<2>tuyaux'
-  //        query: 'dimension<->de<->tuyaux'
-  //        query: 'VACUOMÈTRE'
-  //        query: 'alliage<2>cuivre'
-//          query: 'raccord<2>laiton',
-        lang: 'french',
-//        query: 'normalized<->lexeme',
-//        query: 'stop<->word',
-//          query: '64-bit'
-//          query: 'vacuum<->freeze | relfrozenxid'
-          query: _query
-      }
-
-  );//.then(r=>{console.log(r)})
-  //data.h1 = data.h1.replace(/[ \.][ \.]+/g,' ')
-
-
-
-
-  if (false)
-  data.forEach(it=>{
-    console.log(`\n\n=======================\n<${it.filename}>::${it.pageno+1}::${it.rank}`)
-    console.log(`data:`,it.h1.replace(/[ \.][ \.]+/g,' ').replace(/\s\s+/g,' ').replace(/<!>/g,' (...) '));
-//    console.log('body:\n============\n',it.body);
-  })
-
-  return data;
-} catch (e){
-  console.log('ERROR:', JSON.stringify(e))
-  console.log('e.message:', e.message);
-  Session.set('e.message',e.message)
-//  console.log('db.QueryResultError:', db.QueryResultError())
-}
-}
-
-
 const format_tsquery = (s) =>{
+  if (s.match(/[\|\&\<\>]/)) {
+    // do nothing
+    return s;
+  }
+  s = s.trim();
+  if (s.startsWith('"') && (s.endsWith('"'))) {
+    return s.replace(/"/g,'').split(' ').join('<->');
+  }
+
+  s = s.replace(/"/g,' ').replace(/\s+/g,' ')
+    .split(' ').join(' & ');
+  /*
   const inter = R.intersection('|&<>',s);
   if (!inter.length) {
-    // phraseto_tsquery => replace spaces with <->
+    //
     console.log('int:',R.intersection('|&<>',s));
     return s.split(' ').join('<->');
   }
-
+  */
 return s;
 }
 
 // ---------------------------------------------------------------------------
 
+async function search_v1(query) {
+  const vdico = nspell.vdico();
+  //console.log(`nspell.vdico:`,vdico);
+
+  query = query.replace(/"/g,' ')
+  const audit = [];
+
+    // check if there is logical operators in the query, if so execute.
+  if (query.match(/[<>\&\|]/)) {
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(query)
+    etime = new Date().getTime() - etime;
+    console.log(`q1:(${etime} ms.) ${data.length} results for: ${query}`)
+    audit.push(`q1: (${etime} ms.) ${data.length} results for: ${query}`)
+    return {etime, audit, hlist: data}
+  }
+  // --- here, we don't have logic.
+
+  const vq = query.split(' ');
+
+  // try the phraseto_tsquery
+  if (true) {
+    const _query = vq.join('<->');
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(_query)
+    etime = new Date().getTime() - etime;
+    console.log(`q20:(${etime} ms.) ${data.length} results for: ${_query}`)
+    audit.push(`q20: (${etime} ms.) ${data.length} results for: ${_query}`)
+    if (data.length > 0) {
+      return {etime, audit, hlist: data}
+    }
+  }
+
+  if (true) { // try suggestions same length ()<->()<->()
+    const _query = vq.map(w => {
+      if (w.length > 2)
+        w =vdico[0].suggest(w).filter(it=>(it.length == w.length)).concat([w]).join(' | ')
+      return `(${w})`;
+    }).join('<->')
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(_query)
+    etime = new Date().getTime() - etime;
+    console.log(`q21:(${etime} ms.) ${data.length} results for: ${_query}`)
+    audit.push(`q21: (${etime} ms.) ${data.length} results for: ${_query}`)
+    if (data.length > 0) {
+      return {etime, audit, hlist: data}
+    }
+  }
+
+  if (true) { // try suggestions same length ()<->()<->()
+    const _query = vq.map(w => {
+      if (w.length > 2)
+        w =vdico[0].suggest(w)
+              .filter(it=>((it.length <= w.length+1)&&(it.length >= w.length-1)))
+              .concat([w]).join(' | ')
+      return `(${w})`;
+    }).join('<->')
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(_query)
+    etime = new Date().getTime() - etime;
+    console.log(`q22:(${etime} ms.) ${data.length} results for: ${_query}`)
+    audit.push(`q22: (${etime} ms.) ${data.length} results for: ${_query}`)
+    if (data.length > 0) {
+      return {etime, audit, hlist: data}
+    }
+  }
+
+
+  // in & and | mode, ignore 1,2 letters words.
+  const vq3 = vq.filter(it => (it.length>2));
+
+  if (true) { // try the AND
+    const _query = vq3.join(' & ');
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(_query)
+    etime = new Date().getTime() - etime;
+    console.log(`q30:(${etime} ms.) ${data.length} results for: ${_query}`)
+    audit.push(`q30: (${etime} ms.) ${data.length} results for: ${_query}`)
+    if (data.length > 0) {
+      return {etime, audit, hlist: data}
+    }
+  }
+
+
+
+  if (true) { // try the AND
+    const _query = vq3.join(' | ');
+    let etime = new Date().getTime();
+    const data = await db.pdf__search_rank_cd(_query)
+    etime = new Date().getTime() - etime;
+    console.log(`q40:(${etime} ms.) ${data.length} results for: ${_query}`)
+    audit.push(`q40: (${etime} ms.) ${data.length} results for: ${_query}`)
+//    if (data.length > 0) {
+      return {etime, audit, hlist: data}
+//    }
+  }
+
+
+}
+
+// ---------------------------------------------------------------------------
 
 Meteor.methods({
-  'search': (query) => {
+  'search': (query) =>{
+    return search_v1(query);
+  },
+  'search2': (query) => {
     try {
-//      const data = search_rank_cd(mk_query(tsquery)); // a promise
-      const data = db.pdf__search_rank_cd(format_tsquery(query));
-      console.log('data:',data)
-      return data; // a promise : async - non blocking.
+      const etime = new Date().getTime();
+      const audit = [];
+      let _query = format_tsquery(query);
+console.log('_query:',_query)
+      return db.pdf__search_rank_cd(_query)
+      .then(data =>{
+        let _etime = new Date().getTime() - etime;
+        console.log(`1:(${_etime} ms.) ${data.length} results for: ${_query}`)
+        audit.push(`(${_etime} ms.) ${data.length} results for: ${_query}`)
+        if (!data || data.length <=0) {
+          _query = nspell.mk_suggestions1(query);
+          console.log('_query:',_query)
+          const etime = new Date().getTime();
+          return db.pdf__search_rank_cd(_query)
+          .then(data=>{
+            _etime = new Date().getTime() - etime;
+            console.log(`2:(${_etime} ms.) ${data.length} results for: ${_query}`)
+            audit.push(`(${_etime} ms.) ${data.length} results for: ${_query}`)
+            if (data.length > 0)
+              return data;
+            else {
+              _query = nspell.mk_suggestions2(query);
+              console.log('_query:',_query)
+              const etime = new Date().getTime();
+              return db.pdf__search_rank_cd(_query)
+              .then(data=>{
+                _etime = new Date().getTime() - etime;
+                console.log(`3:(${_etime} ms.) ${data.length} results for: ${_query}`)
+                audit.push(`(${_etime} ms.) ${data.length} results for: ${_query}`)
+                return data
+              });
+            }
+          })
+        }
+        else
+          return data;
+      })
+      .then(data=>{
+        return{
+          audit,
+          hlist:data
+        }
+      })
     } catch (e) {
-      console.log('ERROE',e);
+      console.log('ERROR',e);
     }
 /*
     return new Promise(resolve => {
