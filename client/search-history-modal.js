@@ -6,6 +6,13 @@ const TP = Template.search_history;
 
 Session.set('query','')
 
+
+import { ClientStorage } from 'meteor/ostrio:cstorage';
+
+const History = require('./local-storage.js')
+query_History = new History('query-history');
+query_History.compact();
+
 /****************************
 TP.onCreated(function(){
   this.autorun(()=>{
@@ -37,10 +44,7 @@ TP.events({
 
 TP.helpers({
   history: ()=>{
-    const ts = Session.get('history-timeStamp');
-    console.log('helper:histry ts:',ts);
-    const h = query_History.list({verbose:1});
-    console.log('--- h:',h)
-    return h
+    console.log('history::helper:: activated.')
+    return Session.get('query-history')
   }
 })

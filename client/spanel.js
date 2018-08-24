@@ -1,11 +1,6 @@
 import R from 'ramda';
 console.log('spanel file');
 
-import { ClientStorage } from 'meteor/ostrio:cstorage';
-
-const History = require('./local-storage.js')
-query_History = new History('query-history');
-query_History.compact();
 
 
 Template.search_panel.onCreated(function(){
@@ -85,9 +80,8 @@ Template.search_panel.onCreated(function(){
 
 Template.search_panel.events({
   'click .js-search-history': (ev,tp)=>{
-    Session.set('history-timeStamp', new Date())
+    Session.set('query-history', query_History.list());
     const bg = document.getElementById('search-history-modal');
-    console.log('bg:',bg);
     bg.style.display = 'block';
   },
   'click .js-clear-history': (ev,tp)=>{
