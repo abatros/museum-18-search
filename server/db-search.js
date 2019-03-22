@@ -8,8 +8,8 @@ const conn = {
   host: 'inhelium.com',
   port: 5433,
   database: 'museum-v2',
-  user: 'postgres',
-  password: 'sandeep'
+  user: 'xxxx',
+  password: 'xxxxx'
 };
 
 console.log('db-search.js')
